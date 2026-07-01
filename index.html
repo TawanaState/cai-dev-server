@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAI Dev Server Hub | Center of AI</title>
+    <meta name="description" content="Official developer portal and DevOps guide for the Center of AI (CAI) Contabo development server. Getting started, Docker guidelines, Caddy proxy configurations, and port registry.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #05060b;
+            color: #e2e8f0;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(16, 24, 48, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(31, 16, 48, 0.25) 0%, transparent 40%),
+                linear-gradient(rgba(18, 18, 18, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(18, 18, 18, 0.4) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Neon Glows */
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.15), inset 0 0 15px rgba(6, 182, 212, 0.05);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .neon-border-purple {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.15), inset 0 0 15px rgba(168, 85, 247, 0.05);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .neon-border-green {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.15), inset 0 0 15px rgba(34, 197, 94, 0.05);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .neon-border-amber {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.15), inset 0 0 15px rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+        }
+
+        .neon-text-green {
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        /* Scanlines & Terminal Overlay */
+        .crt-panel {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .crt-panel::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Blinking Terminal Cursor */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: #22c55e;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        @keyframes blink {
+            from, to { background-color: transparent }
+            50% { background-color: #22c55e }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        /* Custom notifications */
+        .copy-toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #0f172a;
+            color: #22c55e;
+            text-align: center;
+            border-radius: 6px;
+            padding: 12px;
+            position: fixed;
+            z-index: 50;
+            bottom: 30px;
+            right: 30px;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+            transition: visibility 0s, opacity 0.3s linear;
+            opacity: 0;
+        }
+
+        .copy-toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200">
+
+    <!-- Header Section -->
+    <header class="sticky top-0 z-40 bg-[#07080d]/80 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-cyan-500/20">
+                    C
+                </div>
+                <div>
+                    <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">CENTER OF AI</span>
+                    <span class="text-xs block text-slate-400 font-mono tracking-widest uppercase">Dev Server Portal</span>
+                </div>
+            </div>
+
+            <!-- Server Status Ribbon -->
+            <div class="flex items-center space-x-3 bg-emerald-950/40 border border-emerald-500/30 rounded-full px-4 py-1.5">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-mono font-semibold text-emerald-400 tracking-wider">HEALTHY // ONLINE</span>
+                <span class="text-slate-500 text-xs hidden md:inline font-mono">| PORT: 8001</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- Hero Section: Title & Terminal Metrics -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 flex flex-col justify-center space-y-4">
+                <span class="px-3 py-1 text-xs font-mono font-semibold text-cyan-400 bg-cyan-950/40 border border-cyan-800/50 rounded-md w-fit uppercase tracking-widest">
+                    SYSTEM INSTANTIATED
+                </span>
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                    DevOps Engine & <br>
+                    <span class="bg-gradient-to-r from-cyan-400 via-cyan-300 to-purple-400 bg-clip-text text-transparent">Getting Started Guide</span>
+                </h1>
+                <p class="text-slate-400 max-w-xl leading-relaxed text-base sm:text-lg">
+                    Welcome to the <strong>Center of AI (CAI)</strong> development environment. Multiple developers build, test, and host apps concurrently on this Contabo VPS. Use this guide to deploy safely, configure Caddy proxies, prevent port conflicts, and manage dockerised configurations.
+                </p>
+                <div class="flex flex-wrap gap-4 pt-2">
+                    <a href="#guide-sections" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-900 font-bold rounded-lg transition-all duration-200 shadow-lg shadow-cyan-500/20 hover:scale-[1.02]">
+                        Explore Guides
+                    </a>
+                    <a href="#script-generator" class="px-5 py-2.5 bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-200 font-semibold rounded-lg transition-all duration-200 hover:scale-[1.02]">
+                        Script Generator
+                    </a>
+                </div>
+            </div>
+
+            <!-- Live Server Info Box -->
+            <div class="bg-slate-950/80 border border-emerald-500/30 rounded-xl crt-panel neon-border-green p-6 flex flex-col justify-between space-y-6">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-emerald-950/80 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-emerald-500 font-mono text-sm font-bold">cai-dev-srv:~$ monitor</span>
+                    </div>
+                    <span class="text-emerald-500/60 font-mono text-xs" id="current-time">UTC 00:00:00</span>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 font-mono text-xs text-slate-300">
+                    <div class="bg-emerald-950/20 p-2.5 rounded border border-emerald-950/50">
+                        <span class="text-emerald-500 block mb-1">▶ SYSTEM UPTIME</span>
+                        <span class="text-sm font-bold text-white font-mono" id="uptime-val">Loading...</span>
+                    </div>
+                    <div class="bg-emerald-950/20 p-2.5 rounded border border-emerald-950/50">
+                        <span class="text-emerald-500 block mb-1">▶ RAM USAGE</span>
+                        <span class="text-sm font-bold text-white font-mono" id="ram-val">Loading...</span>
+                    </div>
+                    <div class="bg-emerald-950/20 p-2.5 rounded border border-emerald-950/50">
+                        <span class="text-emerald-500 block mb-1">▶ CPU LOAD</span>
+                        <span class="text-sm font-bold text-white font-mono" id="cpu-val">Loading...</span>
+                    </div>
+                    <div class="bg-emerald-950/20 p-2.5 rounded border border-emerald-950/50">
+                        <span class="text-emerald-500 block mb-1">▶ LIVE PORTS</span>
+                        <span class="text-sm font-bold text-white font-mono" id="containers-count">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Live Logs from actual server connections -->
+                <div class="bg-black/60 rounded p-3 font-mono text-[10px] text-emerald-400/80 space-y-1 max-h-[85px] overflow-hidden" id="live-logs-box">
+                    <div>[sys] Connecting to status api...</div>
+                    <div class="animate-pulse">[sys] Awaiting payload...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Golden Rules Callout -->
+        <section class="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border-l-4 border-amber-500 rounded-r-xl p-6 shadow-md">
+            <div class="flex items-start space-x-4">
+                <div class="p-2.5 bg-amber-500/20 rounded-lg text-amber-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-lg font-bold text-amber-300 font-mono tracking-wide uppercase">Core Server Rules (Strict Compliance Required)</h3>
+                    <ul class="text-slate-300 text-sm space-y-2 list-disc list-inside">
+                        <li><strong class="text-white">Minimum Exposure Rule:</strong> Only ports <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-400 font-mono text-xs">80</code> (HTTP) and <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-400 font-mono text-xs">443</code> (HTTPS) should be exposed externally via the firewall/DNS. Caddy manages everything.</li>
+                        <li><strong class="text-white">Unique Ports Registry:</strong> Every project running on the server <em>must</em> occupy a unique port (e.g., 8010, 8020). Coordinate with the team and register your port in the registry below to avoid resource locking!</li>
+                        <li><strong class="text-white">Folderization Standard:</strong> Folderise and scope all projects neatly inside <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-400 font-mono text-xs">~/cai-apps/&lt;project-name&gt;</code>, grouped by team scope.</li>
+                        <li><strong class="text-white">Gitignore hygiene:</strong> Never commit secrets, environment configs (<code class="bg-slate-900 px-1 py-0.5 rounded text-amber-400 font-mono text-xs">.env</code>), node_modules, log files, or SSH private keys. Ensure a solid gitignore is in place.</li>
+                        <li><strong class="text-white">Docker-First:</strong> All apps must run within Docker containers. No direct Node/Python runtimes should run raw on the host to avoid version conflicts and memory leak failures.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Command Palette & Search -->
+        <section class="space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white tracking-tight">DevOps Reference Guides</h2>
+                    <p class="text-slate-400 text-sm">Filter topics or copy quick scripts instantly.</p>
+                </div>
+                <!-- Search bar -->
+                <div class="relative w-full md:w-80">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="guide-search" placeholder="Search guides (e.g., caddy, env, git)..." 
+                           class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/80 transition-colors">
+                </div>
+            </div>
+
+            <!-- Guide Sections Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="guide-sections">
+                
+                <!-- Guide Card 1: SSH Access -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="login ssh exit access console password keys contabo">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">1. Login & SSH Session</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Access the server using secure SSH keypairs. Password login has been locked down completely on the Contabo daemon to prevent bot bruteforcing.
+                        </p>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">SSH Commands</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center group">
+                                <code class="truncate">ssh root@&lt;CONTABO_IP&gt;</code>
+                                <button onclick="copyText('ssh root@<CONTABO_IP>')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1" title="Copy to clipboard">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Clean Exit</span>
+                            <p class="text-xs text-slate-400">Always exit sessions cleanly to release terminal hooks:</p>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>exit</code>
+                                <button onclick="copyText('exit')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Contabo Security Tip</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 2: Editing Files -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="edit file nano vim write save editor text">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">2. Editing Server Files</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            For rapid config edits, use server-friendly terminal editors like <strong class="text-white">nano</strong> or <strong class="text-white">vim</strong>.
+                        </p>
+                        <div class="space-y-2">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">NANO Quick Reference</span>
+                            <div class="bg-black/80 rounded p-3 text-xs code-font text-slate-300 space-y-1">
+                                <div><span class="text-cyan-400">nano &lt;filename&gt;</span> - Open/Create File</div>
+                                <div><span class="text-purple-400">Ctrl + O</span> - Save / Write Out Changes</div>
+                                <div><span class="text-purple-400">Enter</span> - Confirm File name write</div>
+                                <div><span class="text-purple-400">Ctrl + X</span> - Exit Nano Editor</div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            Avoid editing large application source files on the server directly. Build and deploy them using Git.
+                        </p>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Nano Editor</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 3: Project Folderization -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="folder mkdir project directory folderise path workspace layout structure cai-apps">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">3. Project Folderization</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Organize projects cleanly within defined directories. Group all production/test apps inside the shared <code class="text-white text-xs bg-slate-900 px-1 py-0.5 rounded">~/cai-apps</code> root.
+                        </p>
+                        <div class="space-y-2">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Directory Structure Standard</span>
+                            <div class="bg-black/80 rounded p-3 text-xs code-font text-slate-400">
+                                <div>~ (Root Directory)</div>
+                                <div>└── <span class="text-cyan-400">cai-apps</span>/ <span class="text-slate-500"># Central hub</span></div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-purple-400">project-amara</span>/</div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-purple-400">cai-dev-server</span>/ <span class="text-emerald-400"># This app</span></div>
+                                <div>&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="text-purple-400">project-beta</span>/</div>
+                            </div>
+                        </div>
+                        <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                            <code>mkdir -p ~/cai-apps && cd ~/cai-apps</code>
+                            <button onclick="copyText('mkdir -p ~/cai-apps && cd ~/cai-apps')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Workspace Standard</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 4: Git Setup & Private Repos -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="git ssh key private clone gitignore environment variables credentials github keygen">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M8 7H6a2 2 0 00-2 2v3a2 2 0 002 2h2m10-7v2a2 2 0 01-2 2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">4. Git & Private Clones</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            To clone private git repositories securely, you must generate a deployment key on the server and add it to Github/Gitlab.
+                        </p>
+                        <div class="space-y-1.5">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">1. Generate Key on VPS</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code class="truncate">ssh-keygen -t ed25519 -C "cai-dev-vps"</code>
+                                <button onclick="copyText('ssh-keygen -t ed25519 -C \"cai-dev-vps\"')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">2. View & Copy Key to GitHub</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>cat ~/.ssh/id_ed25519.pub</code>
+                                <button onclick="copyText('cat ~/.ssh/id_ed25519.pub')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            Use deploy keys with Read-Only access in your repositories' Settings -> Deploy Keys to maximize project security.
+                        </p>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Git Access</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 5: Env Variables & Gitignores -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="env environment secrets variables config gitignore security lock file permissions dot-env">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">5. Env Config & Gitignores</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Maintain a strict separation between code and secrets. Keep values inside a <code class="text-white text-xs bg-slate-900 px-1 py-0.5 rounded">.env</code> file.
+                        </p>
+                        <div class="space-y-2">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Clean .gitignore File Example</span>
+                            <div class="bg-black/80 rounded p-3 text-xs code-font text-slate-300 space-y-1">
+                                <div class="text-slate-500"># Ignore environment secrets</div>
+                                <div>.env</div>
+                                <div class="text-slate-500"># Ignore node modules & logs</div>
+                                <div>node_modules/</div>
+                                <div>*.log</div>
+                                <div class="text-slate-500"># Ignore local system keys</div>
+                                <div>*.pem</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Secure Env Permissions</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>chmod 600 .env</code>
+                                <button onclick="copyText('chmod 600 .env')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Security Hygiene</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 6: Docker Integration -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="docker dockerfile compose container run build pull restart containerise dockerised docker-compose">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">6. Docker Build & Run</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Dockerise every application. Do not run processes in background screens directly on the VPS host system.
+                        </p>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">1. Build Docker Image</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>docker build -t app-name .</code>
+                                <button onclick="copyText('docker build -t app-name .')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">2. Run Container (Localhost bound)</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code class="truncate">docker run -d --name app-name -p 127.0.0.1:8080:8080 --restart always app-name</code>
+                                <button onclick="copyText('docker run -d --name app-name -p 127.0.0.1:8080:8080 --restart always app-name')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Dockerisation</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 7: Caddy Proxy Config -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="caddy proxy reload candy config subfolder domain ssl domain redirection routing reverse_proxy reverse">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">7. Caddy & Auto-SSL</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Caddy sits as the gateway reverse-proxy. It intercepts all HTTPS requests and forwards them internally.
+                        </p>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Caddyfile Rule (/etc/caddy/Caddyfile)</span>
+                            <div class="bg-black/80 rounded p-2.5 text-xs code-font text-slate-300 space-y-1">
+                                <div>your-sub.yourdomain.com {</div>
+                                <div class="pl-4 text-cyan-400">reverse_proxy localhost:8000</div>
+                                <div>}</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Reload Caddy Daemon</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>systemctl reload caddy</code>
+                                <button onclick="copyText('systemctl reload caddy')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Web Routing</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 8: Crontab Schedules -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="cron crontab automation tasks schedule script cleanup backups list edit">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">8. Cron Maintenance</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Contabo dev server uses standard Linux <code class="text-white text-xs bg-slate-900 px-1 py-0.5 rounded">crontab</code> routines to run nightly disk cleanups, docker log rotations, and automated backups.
+                        </p>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">View Active Cron Tasks</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>crontab -l</code>
+                                <button onclick="copyText('crontab -l')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Edit Cron Registry</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>crontab -e</code>
+                                <button onclick="copyText('crontab -e')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Crontab Jobs</span>
+                    </div>
+                </div>
+
+                <!-- Guide Card 9: Network Checkups -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-4 flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-200 search-card" data-tags="netstat ss port allocation network sockets list debug connection net">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-cyan-950/50 rounded-lg text-cyan-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                                </svg>
+                            </span>
+                            <h3 class="text-lg font-bold text-white font-mono">9. Port & Socket Inspector</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            To inspect active ports, see what processes are running, or identify conflicting local binds, run these diagnostic scripts.
+                        </p>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Show All Listening Ports</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>ss -tulpn</code>
+                                <button onclick="copyText('ss -tulpn')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-500 uppercase font-mono block">Identify Specific Port Process</span>
+                            <div class="relative bg-black rounded p-2 text-xs code-font text-cyan-300 flex justify-between items-center">
+                                <code>netstat -tulpn | grep :8000</code>
+                                <button onclick="copyText('netstat -tulpn | grep :8000')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-900 pt-3 mt-4">
+                        <span class="text-xs font-semibold text-cyan-500 uppercase tracking-widest font-mono">Server Audit</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Port Allocation Registry -->
+        <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white tracking-tight">Active Port Registry</h2>
+                    <p class="text-slate-400 text-sm">Review ports currently listening or mapped in Caddy configurations.</p>
+                </div>
+                <button onclick="refreshMetrics()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold font-mono text-cyan-400 rounded-lg transition-colors flex items-center space-x-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
+                    </svg>
+                    <span>REFRESH DATA</span>
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm font-mono border-collapse" id="ports-table">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 uppercase text-xs tracking-wider">
+                            <th class="py-3 px-4">Port Number</th>
+                            <th class="py-3 px-4">Application details</th>
+                            <th class="py-3 px-4">Owner / Agent</th>
+                            <th class="py-3 px-4">Local IP Bind</th>
+                            <th class="py-3 px-4">Proxy domain</th>
+                            <th class="py-3 px-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-900 text-slate-300" id="ports-table-body">
+                        <tr>
+                            <td colspan="6" class="py-6 px-4 text-center text-slate-500">Loading port registry from server api...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Port Registry instructions -->
+            <div class="bg-black/40 rounded-lg p-4 text-xs text-slate-400 flex items-start space-x-3 border border-slate-900">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyan-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="space-y-1">
+                    <p class="leading-relaxed">
+                        <strong>Live Sync:</strong> This table reads real-time server sockets from <code class="bg-slate-950 px-1 py-0.5 rounded text-cyan-400">/proc/net/tcp</code> and routing parameters from <code class="bg-slate-950 px-1 py-0.5 rounded text-cyan-400">/etc/caddy/Caddyfile</code>.
+                    </p>
+                    <p class="leading-relaxed text-slate-500">
+                        If your port is mapped in Caddy but shows <span class="text-red-400 font-bold">OFFLINE</span>, it means the backend application container is down or not bound to that specific port.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Script & Configuration Generator -->
+        <section id="script-generator" class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white tracking-tight">Interactive Deploy Script Generator</h2>
+                <p class="text-slate-400 text-sm">Configure your project specs below to generate customized setup scripts, Dockerfiles, and Caddy proxy entries.</p>
+            </div>
+
+            <!-- Input Fields Panel -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-900/40 p-5 rounded-lg border border-slate-800">
+                <div class="space-y-1">
+                    <label for="input-project" class="block text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">Project Slug</label>
+                    <input type="text" id="input-project" value="ai-chatbot" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1">
+                    <label for="input-port" class="block text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">Internal App Port</label>
+                    <input type="number" id="input-port" value="8045" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1">
+                    <label for="input-domain" class="block text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">Reverse Proxy Domain</label>
+                    <input type="text" id="input-domain" value="chatbot.cai-servers.com" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1">
+                    <label for="input-git" class="block text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">Git Repo URL</label>
+                    <input type="text" id="input-git" value="git@github.com:cai-dev/ai-chatbot.git" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+            </div>
+
+            <!-- Tabbed Code Snippet Output -->
+            <div class="space-y-3">
+                <div class="flex border-b border-slate-800">
+                    <button onclick="switchTab('tab-setup')" id="btn-tab-setup" class="px-4 py-2 text-sm font-semibold border-b-2 border-cyan-500 text-cyan-400 focus:outline-none transition-colors">Server Setup Run</button>
+                    <button onclick="switchTab('tab-dockerfile')" id="btn-tab-dockerfile" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white focus:outline-none transition-colors">Dockerfile</button>
+                    <button onclick="switchTab('tab-compose')" id="btn-tab-compose" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white focus:outline-none transition-colors">docker-compose.yml</button>
+                    <button onclick="switchTab('tab-caddy')" id="btn-tab-caddy" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white focus:outline-none transition-colors">Caddyfile proxy</button>
+                </div>
+
+                <!-- Setup Tab -->
+                <div id="tab-setup" class="code-tab relative bg-black/90 rounded-lg p-5 border border-slate-850">
+                    <button onclick="copyCurrentCode()" class="absolute top-4 right-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 p-2 rounded text-xs transition-colors flex items-center space-x-1.5 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span class="font-mono">Copy Code</span>
+                    </button>
+                    <pre class="text-xs code-font text-teal-300 overflow-x-auto leading-relaxed max-h-[350px]" id="code-setup"></pre>
+                </div>
+
+                <!-- Dockerfile Tab -->
+                <div id="tab-dockerfile" class="code-tab hidden relative bg-black/90 rounded-lg p-5 border border-slate-850">
+                    <button onclick="copyCurrentCode()" class="absolute top-4 right-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 p-2 rounded text-xs transition-colors flex items-center space-x-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span class="font-mono">Copy Code</span>
+                    </button>
+                    <pre class="text-xs code-font text-teal-300 overflow-x-auto leading-relaxed max-h-[350px]" id="code-dockerfile"></pre>
+                </div>
+
+                <!-- docker-compose Tab -->
+                <div id="tab-compose" class="code-tab hidden relative bg-black/90 rounded-lg p-5 border border-slate-850">
+                    <button onclick="copyCurrentCode()" class="absolute top-4 right-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 p-2 rounded text-xs transition-colors flex items-center space-x-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span class="font-mono">Copy Code</span>
+                    </button>
+                    <pre class="text-xs code-font text-teal-300 overflow-x-auto leading-relaxed max-h-[350px]" id="code-compose"></pre>
+                </div>
+
+                <!-- Caddyfile Tab -->
+                <div id="tab-caddy" class="code-tab hidden relative bg-black/90 rounded-lg p-5 border border-slate-850">
+                    <button onclick="copyCurrentCode()" class="absolute top-4 right-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 p-2 rounded text-xs transition-colors flex items-center space-x-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span class="font-mono">Copy Code</span>
+                    </button>
+                    <pre class="text-xs code-font text-teal-300 overflow-x-auto leading-relaxed max-h-[350px]" id="code-caddy"></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Common Errors Troubleshooting Logs -->
+        <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white tracking-tight">Troubleshooting logs & Common Errors</h2>
+                <p class="text-slate-400 text-sm">Diagnostic definitions for errors often encountered on our Docker/Contabo architecture.</p>
+            </div>
+
+            <!-- Terminal Error Grid -->
+            <div class="space-y-4 font-mono text-sm">
+                
+                <!-- Error 1 -->
+                <div class="bg-black/50 border border-red-900/40 rounded-lg overflow-hidden">
+                    <button onclick="toggleError('error-bind')" class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-900/50 focus:outline-none transition-colors">
+                        <div class="flex items-center space-x-3 text-red-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                            <span class="font-bold">E-01: PORT BINDING CLASH (ALLOCATED ERROR)</span>
+                        </div>
+                        <span class="text-slate-500 text-xs" id="indicator-error-bind">[+] Expand</span>
+                    </button>
+                    <div id="error-bind" class="hidden p-4 border-t border-slate-900 space-y-3 bg-slate-950/80">
+                        <div class="space-y-1">
+                            <span class="text-xs text-red-400/80 uppercase font-mono block">Terminal Output:</span>
+                            <pre class="bg-black/90 p-3 rounded text-xs text-slate-300 overflow-x-auto">docker: Error response from daemon: driver failed programming external connectivity on endpoint:
+Bind for 0.0.0.0:8045 failed: port is already allocated.</pre>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <span class="text-amber-400 font-bold block mb-1">▶ CAUSE</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    Another running Docker container or native process has already bound to port 8045 on the host network interfaces.
+                                </p>
+                            </div>
+                            <div>
+                                <span class="text-emerald-400 font-bold block mb-1">▶ SOLUTION</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    Run <code class="bg-black px-1 py-0.5 rounded text-cyan-400">ss -tulpn | grep :8045</code> to locate the running container, stop it via docker, or switch your project to an unallocated port.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error 2 -->
+                <div class="bg-black/50 border border-red-900/40 rounded-lg overflow-hidden">
+                    <button onclick="toggleError('error-git')" class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-900/50 focus:outline-none transition-colors">
+                        <div class="flex items-center space-x-3 text-red-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                            <span class="font-bold">E-02: PRIVATE GIT AUTH DENIED (PUBLICKEY)</span>
+                        </div>
+                        <span class="text-slate-500 text-xs" id="indicator-error-git">[+] Expand</span>
+                    </button>
+                    <div id="error-git" class="hidden p-4 border-t border-slate-900 space-y-3 bg-slate-950/80">
+                        <div class="space-y-1">
+                            <span class="text-xs text-red-400/80 uppercase font-mono block">Terminal Output:</span>
+                            <pre class="bg-black/90 p-3 rounded text-xs text-slate-300 overflow-x-auto">git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository. Please make sure you have correct access rights.</pre>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <span class="text-amber-400 font-bold block mb-1">▶ CAUSE</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    The root user ssh key (`~/.ssh/id_ed25519.pub`) is not registered in the target repository's deploy keys, or the ssh agent is not loading the key.
+                                </p>
+                            </div>
+                            <div>
+                                <span class="text-emerald-400 font-bold block mb-1">▶ SOLUTION</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    Follow Guide #4. Run <code class="bg-black px-1 py-0.5 rounded text-cyan-400">cat ~/.ssh/id_ed25519.pub</code>, copy the public key content, and add it to your repo's GitHub Deploy Keys.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error 3 -->
+                <div class="bg-black/50 border border-red-900/40 rounded-lg overflow-hidden">
+                    <button onclick="toggleError('error-caddy')" class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-900/50 focus:outline-none transition-colors">
+                        <div class="flex items-center space-x-3 text-red-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                            <span class="font-bold">E-03: CADDYFILE SYNTAX / RELOAD FAILS</span>
+                        </div>
+                        <span class="text-slate-500 text-xs" id="indicator-error-caddy">[+] Expand</span>
+                    </button>
+                    <div id="error-caddy" class="hidden p-4 border-t border-slate-900 space-y-3 bg-slate-950/80">
+                        <div class="space-y-1">
+                            <span class="text-xs text-red-400/80 uppercase font-mono block">Terminal Output:</span>
+                            <pre class="bg-black/90 p-3 rounded text-xs text-slate-300 overflow-x-auto">systemctl reload caddy
+Job for caddy.service failed because the control process exited with error code.</pre>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <span class="text-amber-400 font-bold block mb-1">▶ CAUSE</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    Syntax error in the `/etc/caddy/Caddyfile`, missing curly braces, or domains pointing to localhost ports that fail system checks.
+                                </p>
+                            </div>
+                            <div>
+                                <span class="text-emerald-400 font-bold block mb-1">▶ SOLUTION</span>
+                                <p class="text-slate-400 leading-relaxed">
+                                    Run validation using: <code class="bg-black px-1 py-0.5 rounded text-cyan-400">caddy validate --config /etc/caddy/Caddyfile</code> or check journal logs using <code class="bg-black px-1 py-0.5 rounded text-cyan-400">journalctl -u caddy -n 50 --no-pager</code>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="border-t border-slate-900 bg-[#06070a] py-8 text-center text-xs text-slate-600 font-mono">
+        <p>&copy; 2026 Center of AI (CAI). System DevOps Infrastructure.</p>
+        <p class="mt-2 text-slate-700">Contabo Linux VPS // Caddy Server Daemon // Docker Engine v24</p>
+    </footer>
+
+    <!-- Copy Code Toast Notification -->
+    <div id="toast" class="copy-toast">
+        <span class="font-bold">SUCCESS:</span> Snippet copied to clipboard!
+    </div>
+
+    <!-- Scripts for interactivity -->
+    <script>
+        // System status Live Clock (Local Time Simulation)
+        function updateTime() {
+            const timeEl = document.getElementById('current-time');
+            const now = new Date();
+            timeEl.textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Fetch Live Metrics and Port Registry from Real API
+        async function refreshMetrics() {
+            const ramVal = document.getElementById('ram-val');
+            const cpuVal = document.getElementById('cpu-val');
+            const uptimeVal = document.getElementById('uptime-val');
+            const portsCountVal = document.getElementById('containers-count');
+            const portsTableBody = document.getElementById('ports-table-body');
+            const logsBox = document.getElementById('live-logs-box');
+
+            try {
+                const response = await fetch('/api/status');
+                if (!response.ok) throw new Error('API server returned status ' + response.status);
+                const data = await response.json();
+
+                // 1. Render main metric metrics
+                cpuVal.textContent = `${data.system.cpu}%`;
+                ramVal.textContent = `${data.system.ram.percent}% (${data.system.ram.usedGb} / ${data.system.ram.totalGb} GB)`;
+                uptimeVal.textContent = data.system.uptime;
+                portsCountVal.textContent = `${data.ports.length} TCP Ports`;
+
+                // 2. Render port registry table rows
+                if (data.ports.length === 0) {
+                    portsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="py-6 px-4 text-center text-slate-500">No active TCP listening sockets or Caddy proxy routes detected on host.</td>
+                        </tr>`;
+                } else {
+                    portsTableBody.innerHTML = data.ports.map(p => {
+                        const statusClass = p.status === 'ONLINE' 
+                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-red-950/80 text-red-400 border border-red-500/20';
+                        return `
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-3.5 px-4 font-bold text-white">${p.port}</td>
+                                <td class="py-3.5 px-4 text-slate-300">${p.application}</td>
+                                <td class="py-3.5 px-4 text-cyan-400">${p.owner}</td>
+                                <td class="py-3.5 px-4 text-slate-400 font-mono">${p.bindIp || p.endpoint}</td>
+                                <td class="py-3.5 px-4 text-slate-400">${p.domain}</td>
+                                <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${statusClass}">${p.status}</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // 3. Render connection logs
+                const timeStr = new Date().toISOString().substring(11, 19);
+                logsBox.innerHTML = `
+                    <div>[ok] ${timeStr} Fetched real CPU load: ${data.system.cpu}%</div>
+                    <div>[ok] ${timeStr} Detected memory allocation: ${data.system.ram.percent}%</div>
+                    <div>[ok] ${timeStr} Verified active TCP ports list (${data.ports.length} sockets found)</div>
+                    <div class="text-cyan-400">[info] Port scanning matching and Caddy synchronization complete.</div>
+                `;
+
+            } catch (err) {
+                console.error('Error fetching live system metrics:', err);
+                cpuVal.textContent = 'ERROR';
+                ramVal.textContent = 'ERROR';
+                uptimeVal.textContent = 'ERROR';
+                portsCountVal.textContent = 'ERROR';
+                portsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-6 px-4 text-center text-red-500">Failed to connect to backend /api/status. Ensure backend Node server is running.</td>
+                    </tr>`;
+                
+                logsBox.innerHTML = `
+                    <div class="text-red-400">[error] Failed to query /api/status endpoint.</div>
+                    <div class="text-slate-500">[error] ${err.message}</div>
+                `;
+            }
+        }
+
+        // Initial fetch and scheduled interval updates
+        refreshMetrics();
+        setInterval(refreshMetrics, 8000);
+
+        // Copy Code Snippets to Clipboard
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast();
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // Accordion functionality for common errors
+        function toggleError(id) {
+            const errorPanel = document.getElementById(id);
+            const indicator = document.getElementById('indicator-' + id);
+            if (errorPanel.classList.contains('hidden')) {
+                errorPanel.classList.remove('hidden');
+                indicator.textContent = '[-] Collapse';
+            } else {
+                errorPanel.classList.add('hidden');
+                indicator.textContent = '[+] Expand';
+            }
+        }
+
+        // Script Generator State & Config
+        const projectInput = document.getElementById('input-project');
+        const portInput = document.getElementById('input-port');
+        const domainInput = document.getElementById('input-domain');
+        const gitInput = document.getElementById('input-git');
+
+        const codeSetup = document.getElementById('code-setup');
+        const codeDockerfile = document.getElementById('code-dockerfile');
+        const codeCompose = document.getElementById('code-compose');
+        const codeCaddy = document.getElementById('code-caddy');
+
+        let activeTab = 'tab-setup';
+
+        function updateGeneratedCodes() {
+            const proj = projectInput.value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '') || 'app';
+            const port = portInput.value.trim() || '8000';
+            const domain = domainInput.value.trim() || 'app.yourdomain.com';
+            const git = gitInput.value.trim() || 'git@github.com:cai-dev/app.git';
+
+            // Server Setup codeblock content
+            codeSetup.textContent = `# 1. Access the dev server and enter apps directory
+cd ~/cai-apps
+
+# 2. Clone the repository securely using deployment key
+git clone ${git}
+cd ${proj}
+
+# 3. Create production environment variables configuration
+nano .env
+# [DevOps Rule] Write app configuration. Never commit this file.
+# Set appropriate secure file permission
+chmod 600 .env
+
+# 4. Build and instantiate the docker container locally
+docker-compose up -d --build
+
+# 5. Connect Caddy Gateway to route the domain
+# Append the domain reverse proxy settings to Caddyfile
+sudo nano /etc/caddy/Caddyfile
+# ---------------------------------------------
+# ${domain} {
+#     reverse_proxy localhost:${port}
+# }
+# ---------------------------------------------
+
+# 6. Reload Caddy Daemon
+sudo systemctl reload caddy
+
+# 7. Check container logs to verify startup health
+docker logs -f --tail=100 ${proj}-app`;
+
+            // Dockerfile codeblock content
+            codeDockerfile.textContent = `# Multi-stage lightweight Dockerfile build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --only=production
+COPY --from=builder /app/dist ./dist
+# Expose application port.
+# Keep exposed port private to host, Caddy binds it.
+EXPOSE ${port}
+CMD ["node", "dist/index.js"]`;
+
+            // Docker Compose codeblock content
+            codeCompose.textContent = `version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: ${proj}-app
+    restart: always
+    ports:
+      # Expose only locally on the VPS to prevent direct outside connections.
+      # Only Caddy handles incoming traffic from port 80/443.
+      - "127.0.0.1:${port}:${port}"
+    env_file:
+      - .env
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"`;
+
+            // Caddyfile codeblock content
+            codeCaddy.textContent = `# Caddy Proxy rule mapping for ${proj}
+# Place this block into: /etc/caddy/Caddyfile
+
+${domain} {
+    # Forward external SSL/TLS traffic to local docker service container port
+    reverse_proxy localhost:${port}
+    
+    # Optional headers & security parameters
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-XSS-Protection "1; mode=block"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}`;
+        }
+
+        // Add event listeners to input elements to update codes in real-time
+        projectInput.addEventListener('input', updateGeneratedCodes);
+        portInput.addEventListener('input', updateGeneratedCodes);
+        domainInput.addEventListener('input', updateGeneratedCodes);
+        gitInput.addEventListener('input', updateGeneratedCodes);
+
+        // Initial generation
+        updateGeneratedCodes();
+
+        // Switch generator tabs
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.code-tab').forEach(el => el.classList.add('hidden'));
+            // Remove active classes from buttons
+            document.querySelectorAll('#script-generator button[id^="btn-tab-"]').forEach(btn => {
+                btn.classList.remove('border-cyan-500', 'text-cyan-400');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            // Show active tab
+            document.getElementById(tabId).classList.remove('hidden');
+            // Set active button styles
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+            activeBtn.classList.add('border-cyan-500', 'text-cyan-400');
+
+            activeTab = tabId;
+        }
+
+        function copyCurrentCode() {
+            let codeText = '';
+            if (activeTab === 'tab-setup') codeText = codeSetup.textContent;
+            else if (activeTab === 'tab-dockerfile') codeText = codeDockerfile.textContent;
+            else if (activeTab === 'tab-compose') codeText = codeCompose.textContent;
+            else if (activeTab === 'tab-caddy') codeText = codeCaddy.textContent;
+
+            copyText(codeText);
+        }
+
+        // Live Search implementation for guide cards
+        const searchInput = document.getElementById('guide-search');
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.search-card');
+
+            cards.forEach(card => {
+                const tags = card.getAttribute('data-tags').toLowerCase();
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                const body = card.querySelector('p').textContent.toLowerCase();
+
+                if (tags.includes(query) || title.includes(query) || body.includes(query)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

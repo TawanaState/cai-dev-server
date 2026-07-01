@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  cai-guide:
+    build: .
+    container_name: cai-dev-guide
+    restart: always
+    ports:
+      # Exposes the portal on port 8001
+      - "8001:8001"
+    volumes:
+      # Read-only mounts to inspect actual host VPS memory, uptime, and TCP connections
+      - /proc:/host/proc:ro
+      # Read-only mount to read and parse the actual Caddy reverse proxy rules
+      - /etc/caddy:/host/etc/caddy:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
