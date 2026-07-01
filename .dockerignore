@@ -1,0 +1,25 @@
+# Exclude Node.js dependencies
+node_modules/
+npm-debug.log
+
+# Exclude git repository
+.git/
+.gitignore
+
+# Exclude Docker configs and files
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Exclude documentation files not needed inside the container
+README.md
+SERVER.md
+
+# Exclude IDE configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

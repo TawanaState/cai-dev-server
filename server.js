@@ -308,6 +308,6 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`CAI Dev Hub server running on port ${PORT}`);
 });
